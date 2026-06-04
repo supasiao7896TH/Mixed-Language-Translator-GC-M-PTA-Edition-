@@ -1119,7 +1119,7 @@ function FlowLayout({ inP, outP, hist, onSel, aid }) {
 }
 
 function App() {
-  const [t, setTweak] = useTweaks({ layout:'command', geminiModel:'gemini-2.0-flash-lite' });
+  const [t, setTweak] = useTweaks({ layout:'command', geminiModel:'gemini-2.5-flash' });
   const [apiKey, setApiKey] = useState(()=>localStorage.getItem('pta-key')||'');
   const [showModal, setShowModal] = useState(false);
   const [text, setText] = useState('');
@@ -1222,7 +1222,7 @@ function App() {
           options={['split','command','flow']} onChange={v=>setTweak('layout',v)}/>
         <TweakSection label="Gemini Model"/>
         <TweakSelect label="Model" id="geminiModel" value={t.geminiModel}
-          options={['gemini-2.0-flash-lite','gemini-2.0-flash','gemini-1.5-flash','gemini-1.5-pro','gemini-2.5-flash','gemini-2.5-pro']}
+          options={['gemini-2.5-flash','gemini-2.5-pro','gemini-2.0-flash','gemini-2.0-flash-lite','gemini-1.5-flash','gemini-1.5-pro']}
           onChange={v=>setTweak('geminiModel',v)}/>
         <div style={{fontSize:11,color:'var(--t3)',padding:'2px 0 6px',lineHeight:1.5}}>
           เปลี่ยน model ถ้าตัวปัจจุบันใช้ไม่ได้
