@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PTA Language Assistant — GC-M</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+:root {
+  --a:    oklch(0.50 0.14 193); --ah: oklch(0.42 0.14 193);
+  --al:   oklch(0.94 0.05 193); --at: oklch(0.28 0.14 193);
+  --bg:   oklch(0.975 0.006 220);
+  --srf:  #ffffff;               --srf2: oklch(0.955 0.007 220);
+  --txt:  oklch(0.15 0.01 230);  --t2: oklch(0.46 0.02 220);
+  --t3:   oklch(0.68 0.01 220);
+  --bdr:  oklch(0.89 0.012 220); --bdr2: oklch(0.82 0.015 220);
+  --ok:   oklch(0.52 0.14 150);  --okl: oklch(0.95 0.04 150);
+  --tip:  oklch(0.56 0.12 60);   --tipl: oklch(0.97 0.04 60);
+  --err:  #dc2626;               --errl: #fef2f2;
+  --sh:   0 1px 3px oklch(0 0 0/0.07);
+  --sh2:  0 6px 20px oklch(0 0 0/0.10);
+  --r: 8px; --r2: 12px; --hh: 52px;
+}
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html,body,#root { height: 100%; }
+body { font-family:'Sarabun','Lexend',system-ui,sans-serif; font-size:15px;
+  line-height:1.6; background:var(--bg); color:var(--txt); overflow:hidden; }
+
+/* ── Shell ── */
+.app { display:flex; flex-direction:column; height:100vh; }
+.app-hd {
+  height:var(--hh); min-height:var(--hh);
+  background:var(--srf); border-bottom:1.5px solid var(--bdr);
+  display:flex; align-items:center; padding:0 18px; gap:12px;
+  box-shadow:var(--sh); z-index:20; position:relative;
+}
+.brand { display:flex; align-items:center; gap:8px; }
+.brand-name { font-family:'Lexend',sans-serif; font-weight:700; font-size:15px;
+  color:var(--a); letter-spacing:-0.01em; white-space:nowrap; }
+.brand-tag { font-size:10px; font-weight:700; background:var(--al); color:var(--at);
+  padding:2px 7px; border-radius:99px; letter-spacing:0.06em; }
+.hd-c { flex:1; display:flex; justify-content:center; }
+.lay-tabs { display:flex; background:var(--srf2); border:1px solid var(--bdr);
+  border-radius:8px; padding:3px; gap:2px; }
+.lay-tab { font-family:'Lexend',sans-serif; font-size:11px; font-weight:500;
+  padding:4px 13px; border:none; background:none; color:var(--t2);
+  border-radius:5px; cursor:pointer; transition:all .15s; white-space:nowrap; }
+.lay-tab:hover { color:var(--txt); background:var(--srf); }
+.lay-tab.on { background:var(--a); color:#fff; }
+.api-btn { font-size:12px; padding:5px 12px; border-radius:99px;
+  border:1.5px solid var(--bdr); background:none; cursor:pointer;
+  transition:all .15s; white-space:nowrap; }
+.api-btn.ok { border-color:var(--ok); color:var(--ok); }
+.api-btn.no { border-color:var(--err); color:var(--err); }
+.api-btn:hover { background:var(--srf2); }
+.app-main { flex:1; overflow:hidden; }
+
+/* ── Layouts ── */
+.ly-split { display:grid; grid-template-columns:400px 1fr; height:100%; position:relative; }
+.ly-cmd   { display:grid; grid-template-columns:216px 1fr 256px; height:100%; }
+.ly-flow  { height:100%; overflow-y:auto; }
+.flow-inner { max-width:860px; width:100%; margin:0 auto; padding:20px 20px 0;
+  display:flex; flex-direction:column; gap:12px; }
+.flow-div { display:flex; align-items:center; gap:10px; color:var(--t3); font-size:13px; }
+.flow-div-line { flex:1; height:1px; background:var(--bdr); }
+.flow-tabs-wrap { max-width:860px; width:100%; margin:0 auto;
+  padding:0 20px 20px; height:296px; }
+.flow-tab-hd { display:flex; border-bottom:1.5px solid var(--bdr); }
+.flow-tab-btn { padding:8px 16px; font-size:13px; border:none; background:none;
+  color:var(--t2); cursor:pointer; border-bottom:2.5px solid transparent;
+  margin-bottom:-1.5px; transition:all .15s; }
+.flow-tab-btn.on { color:var(--a); border-bottom-color:var(--a); font-weight:600; }
+.flow-tab-body { height:calc(100% - 38px); }
+.cmd-main { display:flex; flex-direction:column; height:100%; overflow:hidden;
+  border-left:1.5px solid var(--bdr); border-right:1.5px solid var(--bdr); }
+.cmd-main .inp-panel { flex:0 0 272px; border-bottom:1.5px solid var(--bdr); }
+.cmd-main .out-panel { flex:1; overflow:hidden; }
+.sp-inp { height:100%; border-right:1.5px solid var(--bdr); }
+.sp-out { height:100%; }
+
+/* ── Panel base ── */
+.panel { background:var(--srf); display:flex; flex-direction:column; overflow:hidden; }
+.flow-card { border:1.5px solid var(--bdr); border-radius:var(--r2); }
+.ph { display:flex; align-items:center; justify-content:space-between;
+  padding:9px 15px; border-bottom:1px solid var(--bdr); min-height:40px; }
+.pt { font-size:12px; font-weight:700; color:var(--t2);
+  text-transform:uppercase; letter-spacing:.05em; }
+.p-scroll { flex:1; overflow-y:auto; }
+.p-empty { padding:24px 14px; text-align:center; color:var(--t3); font-size:13px; }
+
+/* ── Input Panel ── */
+.inp-panel { height:100%; }
+.inp-ta {
+  flex:1; width:100%; padding:13px 15px;
+  font-family:'Sarabun',sans-serif; font-size:15px; line-height:1.75;
+  color:var(--txt); border:none; outline:none; resize:none; background:var(--srf);
+}
+.inp-ta::placeholder { color:var(--t3); }
+.inp-ctrl { padding:10px 13px; border-top:1px solid var(--bdr);
+  display:flex; flex-direction:column; gap:9px; background:var(--srf2); }
+.ctx-row { display:flex; align-items:flex-start; gap:8px; flex-wrap:wrap; }
+.ctx-lbl { font-size:12px; color:var(--t2); font-weight:600; padding-top:5px; white-space:nowrap; }
+.ctx-btns { display:flex; gap:5px; flex-wrap:wrap; }
+.ctx-btn { font-family:'Sarabun',sans-serif; font-size:12px; padding:4px 9px;
+  border:1.5px solid var(--bdr); border-radius:6px; background:var(--srf);
+  color:var(--t2); cursor:pointer; transition:all .15s; }
+.ctx-btn:hover { border-color:var(--a); color:var(--a); }
+.ctx-btn.on { border-color:var(--a); background:var(--al); color:var(--at); font-weight:600; }
+.tr-btn { width:100%; padding:10px; font-family:'Lexend','Sarabun',sans-serif;
+  font-size:14px; font-weight:600; background:var(--a); color:#fff; border:none;
+  border-radius:var(--r); cursor:pointer; transition:all .18s;
+  display:flex; align-items:center; justify-content:center; gap:8px; }
+.tr-btn:hover:not(:disabled) { background:var(--ah); }
+.tr-btn:disabled { opacity:.5; cursor:not-allowed; }
+.shortcut { font-size:10px; opacity:.65; background:rgba(255,255,255,.18);
+  padding:1px 5px; border-radius:3px; }
+.char-c { font-size:11px; color:var(--t3); }
+
+/* ── Output Panel ── */
+.out-panel { height:100%; }
+.out-panel.s-load,.out-panel.s-err,.out-panel.s-empty {
+  display:flex; align-items:center; justify-content:center; }
+.out-scroll { flex:1; overflow-y:auto; padding:14px; }
+
+/* Loading */
+.ld-c { text-align:center; }
+.ld-ring { display:inline-block; width:44px; height:44px; position:relative; margin-bottom:14px; }
+.ld-ring div { box-sizing:border-box; display:block; position:absolute; width:36px; height:36px;
+  margin:4px; border:3px solid var(--a); border-radius:50%;
+  animation:ring 1.2s cubic-bezier(.5,0,.5,1) infinite;
+  border-color:var(--a) transparent transparent transparent; }
+.ld-ring div:nth-child(1){animation-delay:-.45s}
+.ld-ring div:nth-child(2){animation-delay:-.3s}
+.ld-ring div:nth-child(3){animation-delay:-.15s}
+@keyframes ring{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+.ld-txt { font-weight:600; margin-bottom:4px; }
+.ld-sub { font-size:13px; color:var(--t2); }
+
+/* Error */
+.err-c { text-align:center; max-width:380px; padding:20px; }
+.err-c h3 { color:var(--err); margin:10px 0 8px; }
+.err-msg { font-size:13px; color:var(--t2); background:var(--errl);
+  padding:8px 12px; border-radius:var(--r); margin-bottom:8px; word-break:break-word; }
+.err-hint { font-size:12px; color:var(--t3); }
+
+/* Empty */
+.emp-c { text-align:center; padding:28px 20px; }
+.emp-glyph { width:60px; height:60px; background:var(--al); color:var(--a);
+  border-radius:14px; display:inline-flex; align-items:center; justify-content:center;
+  font-family:'Lexend',sans-serif; font-size:20px; font-weight:700; margin-bottom:14px; }
+.emp-c h3 { font-size:17px; margin-bottom:6px; }
+.emp-c p { color:var(--t2); font-size:14px; margin-bottom:14px; }
+.chips { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
+.chip { font-size:12px; padding:4px 10px; background:var(--srf2);
+  border:1px solid var(--bdr); border-radius:99px; color:var(--t2); }
+
+/* ── Result Display ── */
+.res-wrap { display:flex; flex-direction:column; gap:10px; }
+.rs { border-radius:var(--r2); border:1px solid var(--bdr); overflow:hidden; }
+.rs-hd { display:flex; align-items:center; gap:8px; padding:8px 14px;
+  border-bottom:1px solid var(--bdr); background:var(--srf2); }
+.rs-ico { font-size:14px; }
+.rs-ttl { font-size:11px; font-weight:700; color:var(--t2);
+  text-transform:uppercase; letter-spacing:.05em; }
+.rs-rev .rs-hd { background:var(--al); border-color:oklch(.83 .07 193); }
+.rs-th  .rs-hd { background:var(--okl); border-color:oklch(.83 .07 150); }
+.rs-tip .rs-hd { background:var(--tipl); border-color:oklch(.86 .08 60); }
+.dual { display:grid; grid-template-columns:1fr 1fr; }
+.opt { padding:13px; }
+.opt.opt-f { border-left:1px solid var(--bdr); }
+.opt-meta { display:flex; align-items:center; gap:7px; margin-bottom:7px; flex-wrap:wrap; }
+.opt-sub { font-size:11px; color:var(--t3); flex:1; }
+.opt-txt { font-size:15px; color:var(--txt); line-height:1.65; }
+.single { padding:13px; display:flex; align-items:flex-start; gap:12px; }
+.single .opt-txt { flex:1; }
+.bdg { font-size:10px; font-weight:700; padding:2px 8px; border-radius:99px;
+  letter-spacing:.03em; white-space:nowrap; }
+.bdg-d { background:var(--al); color:var(--at); }
+.bdg-f { background:#e0e7ff; color:#3730a3; }
+.th-txt { padding:13px; font-size:15px; line-height:1.7; }
+.tip-txt { padding:13px; font-size:14px; color:var(--tip); line-height:1.7; }
+.tbl-wrap { overflow-x:auto; }
+.cmp-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+.cmp-tbl th { text-align:left; padding:7px 12px; background:var(--srf2);
+  color:var(--t2); font-weight:600; font-size:12px; border-bottom:1px solid var(--bdr); }
+.cmp-tbl td { padding:8px 12px; border-bottom:1px solid var(--bdr); vertical-align:top; }
+.cmp-tbl tr:last-child td { border-bottom:none; }
+.td-o { color:var(--err); text-decoration:line-through; }
+.td-r { color:var(--ok); font-weight:600; }
+.td-w { color:var(--t2); }
+
+/* Copy button */
+.cp-btn { font-size:11px; padding:3px 8px; border:1px solid var(--bdr2);
+  border-radius:5px; background:var(--srf); color:var(--t2); cursor:pointer;
+  transition:all .15s; white-space:nowrap; }
+.cp-btn:hover { border-color:var(--a); color:var(--a); }
+.cp-btn.done { border-color:var(--ok); color:var(--ok); background:var(--okl); }
+
+/* ── Side Panels ── */
+.side-panel { height:100%; }
+.bdg-cnt { font-size:11px; background:var(--srf2); border:1px solid var(--bdr);
+  padding:1px 7px; border-radius:99px; color:var(--t3); }
+.hist-item { padding:10px 14px; border-bottom:1px solid var(--bdr);
+  cursor:pointer; transition:background .12s; }
+.hist-item:hover { background:var(--srf2); }
+.hist-item.on { background:var(--al); border-left:3px solid var(--a); }
+.hist-in { font-size:13px; color:var(--txt); margin-bottom:3px; line-height:1.4; }
+.hist-meta { display:flex; gap:8px; align-items:center; }
+.hist-ctx { font-size:10px; color:var(--t3); background:var(--srf2);
+  padding:1px 6px; border-radius:4px; }
+.hist-tm { font-size:10px; color:var(--t3); font-family:'Lexend',sans-serif; }
+
+/* Glossary */
+.g-search { padding:9px 12px; border-bottom:1px solid var(--bdr); }
+.srch-inp { width:100%; padding:6px 10px; border:1.5px solid var(--bdr);
+  border-radius:var(--r); font-family:'Sarabun',sans-serif; font-size:13px;
+  background:var(--srf2); outline:none; transition:border .15s; }
+.srch-inp:focus { border-color:var(--a); background:var(--srf); }
+.cat-tabs { display:flex; gap:4px; padding:7px 12px;
+  border-bottom:1px solid var(--bdr); flex-wrap:wrap; }
+.cat-tab { font-size:10px; padding:3px 7px; border:1px solid var(--bdr);
+  border-radius:99px; background:none; color:var(--t2); cursor:pointer; transition:all .15s; }
+.cat-tab:hover { border-color:var(--a); color:var(--a); }
+.cat-tab.on { background:var(--a); border-color:var(--a); color:#fff; }
+.g-item { padding:9px 13px; border-bottom:1px solid var(--bdr); position:relative; }
+.g-term { font-size:14px; font-weight:700; color:var(--at); font-family:'Lexend',sans-serif; }
+.g-full { font-size:11px; color:var(--t2); margin:2px 0 3px; }
+.g-thai { font-size:13px; color:var(--txt); }
+.g-cat { position:absolute; top:9px; right:11px; font-size:9px; padding:2px 6px;
+  border-radius:4px; font-weight:700; text-transform:uppercase; }
+.gc-product{background:#e0f2fe;color:#0369a1} .gc-quality{background:#fef3c7;color:#92400e}
+.gc-process{background:#f0fdf4;color:#166534} .gc-chemical{background:#fdf4ff;color:#7e22ce}
+.gc-equipment{background:#fff7ed;color:#9a3412} .gc-control{background:var(--al);color:var(--at)}
+.gc-instrument{background:#e0e7ff;color:#3730a3} .gc-operations{background:#f1f5f9;color:#475569}
+.gc-safety{background:#fee2e2;color:#b91c1c} .gc-maintenance{background:#ecfdf5;color:#065f46}
+.gc-document{background:#f8fafc;color:#64748b}
+
+/* Modal */
+.modal-ov { position:fixed; inset:0; background:oklch(0 0 0/.5);
+  display:flex; align-items:center; justify-content:center; z-index:100;
+  backdrop-filter:blur(3px); }
+.modal-box { background:var(--srf); border-radius:var(--r2); padding:32px;
+  max-width:420px; width:90%; box-shadow:0 24px 48px oklch(0 0 0/.2); text-align:center; }
+.modal-ico { font-size:38px; margin-bottom:10px; }
+.modal-box h2 { font-size:19px; font-weight:700; margin-bottom:7px; }
+.modal-desc { color:var(--t2); font-size:14px; margin-bottom:14px; }
+.modal-inp { width:100%; padding:10px 13px; border:2px solid var(--bdr);
+  border-radius:var(--r); font-size:14px; font-family:'Lexend',monospace;
+  outline:none; transition:border .15s; margin-bottom:6px; }
+.modal-inp:focus { border-color:var(--a); }
+.modal-err { color:var(--err); font-size:12px; margin-bottom:6px; }
+.modal-hint { font-size:12px; color:var(--t3); margin-bottom:18px; }
+.modal-acts { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+.btn-p { padding:10px 22px; background:var(--a); color:#fff; border:none;
+  border-radius:var(--r); font-size:14px; font-weight:600; cursor:pointer; transition:all .15s; }
+.btn-p:hover:not(:disabled){background:var(--ah)} .btn-p:disabled{opacity:.5;cursor:not-allowed}
+.btn-g { padding:10px 18px; background:none; border:1.5px solid var(--bdr);
+  border-radius:var(--r); font-size:14px; color:var(--t2); cursor:pointer; transition:all .15s; }
+.btn-g:hover { border-color:var(--a); color:var(--a); }
+
+/* Floating (split) */
+.float-tools { position:absolute; bottom:16px; right:16px;
+  display:flex; gap:8px; z-index:5; }
+.float-btn { width:42px; height:42px; background:var(--srf); border:1.5px solid var(--bdr);
+  border-radius:50%; font-size:16px; cursor:pointer; box-shadow:var(--sh2);
+  transition:all .15s; display:flex; align-items:center; justify-content:center; }
+.float-btn:hover { background:var(--al); border-color:var(--a); }
+.float-pane { position:absolute; bottom:70px; right:16px; width:310px; height:400px;
+  background:var(--srf); border:1.5px solid var(--bdr); border-radius:var(--r2);
+  box-shadow:var(--sh2); z-index:6; overflow:hidden; }
+.float-pane.right { right:16px; }
+
+/* Spinner */
+@keyframes sp{to{transform:rotate(360deg)}}
+.spin { display:inline-block; width:13px; height:13px; border:2px solid #fff;
+  border-top-color:transparent; border-radius:50%; animation:sp .8s linear infinite; }
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--t3)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- ── Data: System Prompt + Glossary + Contexts ── -->
+<script>
+window.SYSTEM_PROMPT = `You are "PTA Language Assistant" — a professional English editor and bilingual language tutor for GC-M PTA plant workers (petrochemical industry). You help Thai plant operators, DCS engineers, and production staff write accurate, professional English for operational communications.
+
+YOUR ABSOLUTE RULES:
+1. PRESERVE these technical terms EXACTLY — never translate or alter them: DCS, PTA, CTA, Off-spec, Slurry, Trip, Interlock, LOTO, PM, SD, SOP, MOC, PRV, P&ID, PTW, FIC, TIC, PIC, LIC, Startup, Shutdown, Rundown, Mother Liquor, Cake, Filtrate, Crystallizer, Centrifuge, Dryer, Hot Standby, Bypass, Flush, Purge, Upset, Vent, Drain, Oxidation Reactor
+2. CONCISENESS is the priority — plant workers read fast under operational pressure
+3. Match the CONTEXT: Logbook (ultra-short), Email (polite + formal), Shift Report (clear + structured), General (natural)
+4. Respond ONLY with valid JSON — no markdown, no code blocks, no extra text
+
+REQUIRED JSON SCHEMA (respond with exactly this structure):
+{
+  "direct": "Concise direct English for Logbook / LINE message / quick handover note (1–2 sentences)",
+  "formal": "Polite expanded English for Email / incident report / management communication",
+  "needsDual": true or false,
+  "thaiMeaning": "คำอธิบายภาษาไทยที่เป็นธรรมชาติ สั้นกระชับ สำหรับพนักงานโรงงาน",
+  "changes": [
+    {
+      "original": "exact word or phrase from original text",
+      "revised": "corrected / improved version",
+      "reason": "short explanation — Thai-English mix OK"
+    }
+  ],
+  "proTip": "เทคนิคไวยากรณ์หรือคำศัพท์ที่เกี่ยวข้อง 1 ข้อ (ไม่เกิน 2 ประโยค ผสมภาษาได้)"
+}
+
+Set needsDual=true only when Direct and Formal versions differ meaningfully in tone or formality. If the input is already good English, still return the JSON with minor improvements or confirmation.`;
+
+window.PTA_GLOSSARY = [
+  // Products & Quality
+  { term: "PTA",             full: "Purified Terephthalic Acid",        thai: "กรดเทเรฟทาลิกบริสุทธิ์",                  cat: "Product" },
+  { term: "CTA",             full: "Crude Terephthalic Acid",           thai: "กรดเทเรฟทาลิกดิบ",                         cat: "Product" },
+  { term: "Off-spec",        full: "Off-specification Product",         thai: "ผลิตภัณฑ์ที่ไม่ผ่านสเปก / ไม่ได้มาตรฐาน", cat: "Quality" },
+
+  // Process Materials
+  { term: "Slurry",          full: "Crystal Slurry",                    thai: "ของเหลวข้นที่มีผลึกแขวนลอยอยู่",            cat: "Process" },
+  { term: "Mother Liquor",   full: "Mother Liquor",                     thai: "ของเหลวแม่ (หลังแยกผลึกออก)",              cat: "Process" },
+  { term: "Cake",            full: "Filter Cake",                       thai: "ผลึกที่ผ่านการกรองแล้ว",                    cat: "Process" },
+  { term: "Filtrate",        full: "Filtrate",                          thai: "ของเหลวที่ผ่านตัวกรอง",                     cat: "Process" },
+  { term: "Acetic Acid",     full: "Acetic Acid (Process Solvent)",     thai: "กรดอะซิติก (ตัวทำละลายในกระบวนการ)",        cat: "Chemical" },
+  { term: "Upset",           full: "Process Upset",                     thai: "ความผิดปกติในกระบวนการผลิต",                cat: "Process" },
+
+  // Equipment
+  { term: "Oxidation Reactor", full: "Oxidation Reactor (OR)",         thai: "เครื่องปฏิกรณ์ออกซิเดชัน",                  cat: "Equipment" },
+  { term: "Crystallizer",    full: "Crystallizer",                      thai: "เครื่องตกผลึก",                              cat: "Equipment" },
+  { term: "Centrifuge",      full: "Basket Centrifuge",                 thai: "เครื่องหมุนเหวี่ยงแยกผลึก",                 cat: "Equipment" },
+  { term: "Dryer",           full: "Rotary Dryer",                      thai: "เครื่องอบแห้งแบบหมุน",                      cat: "Equipment" },
+  { term: "PRV",             full: "Pressure Relief Valve",             thai: "วาล์วระบายความดัน",                         cat: "Equipment" },
+
+  // Control Systems
+  { term: "DCS",             full: "Distributed Control System",        thai: "ระบบควบคุมแบบกระจาย",                       cat: "Control" },
+  { term: "FIC",             full: "Flow Indicator Controller",         thai: "อุปกรณ์วัดและควบคุมอัตราการไหล",            cat: "Instrument" },
+  { term: "TIC",             full: "Temperature Indicator Controller",  thai: "อุปกรณ์วัดและควบคุมอุณหภูมิ",              cat: "Instrument" },
+  { term: "PIC",             full: "Pressure Indicator Controller",     thai: "อุปกรณ์วัดและควบคุมความดัน",               cat: "Instrument" },
+  { term: "LIC",             full: "Level Indicator Controller",        thai: "อุปกรณ์วัดและควบคุมระดับ",                  cat: "Instrument" },
+
+  // Operations
+  { term: "Trip",            full: "Emergency Shutdown Trip",           thai: "การหยุดฉุกเฉินอัตโนมัติ",                   cat: "Operations" },
+  { term: "Interlock",       full: "Safety Interlock",                  thai: "ระบบล็อกความปลอดภัย",                       cat: "Safety" },
+  { term: "Startup",         full: "Plant Startup",                     thai: "การเริ่มเดินเครื่อง",                        cat: "Operations" },
+  { term: "Shutdown (SD)",   full: "Plant Shutdown",                    thai: "การหยุดเครื่อง",                             cat: "Operations" },
+  { term: "Rundown",         full: "Production Rundown",                thai: "การลดกำลังการผลิต",                         cat: "Operations" },
+  { term: "Hot Standby",     full: "Hot Standby Mode",                  thai: "พร้อมใช้งานในสภาวะร้อน",                    cat: "Operations" },
+  { term: "Bypass",          full: "Process Bypass",                    thai: "การเดินเลี่ยงวงจรปกติ",                     cat: "Operations" },
+  { term: "Flush",           full: "System Flushing",                   thai: "การล้างระบบด้วยของเหลว",                    cat: "Operations" },
+  { term: "Purge",           full: "Gas Purging",                       thai: "การไล่ก๊าซออกจากระบบ",                      cat: "Operations" },
+  { term: "Vent",            full: "Vent / Venting",                    thai: "การระบายก๊าซ / ช่องระบาย",                  cat: "Operations" },
+  { term: "Drain",           full: "Drain / Draining",                  thai: "การระบายของเหลว",                           cat: "Operations" },
+
+  // Safety
+  { term: "LOTO",            full: "Lock Out Tag Out",                  thai: "การล็อคและติดป้ายเพื่อความปลอดภัย",         cat: "Safety" },
+  { term: "PTW",             full: "Permit to Work",                    thai: "ใบอนุญาตทำงาน",                              cat: "Safety" },
+
+  // Maintenance & Documents
+  { term: "PM",              full: "Preventive Maintenance",            thai: "การบำรุงรักษาเชิงป้องกัน",                  cat: "Maintenance" },
+  { term: "P&ID",            full: "Piping and Instrumentation Diagram", thai: "ผังท่อและเครื่องมือวัด",                   cat: "Document" },
+  { term: "SOP",             full: "Standard Operating Procedure",      thai: "ขั้นตอนการปฏิบัติงานมาตรฐาน",              cat: "Document" },
+  { term: "MOC",             full: "Management of Change",              thai: "การจัดการการเปลี่ยนแปลง",                   cat: "Document" },
+];
+
+window.CONTEXTS = [
+  { id: "logbook",      label: "Logbook / LINE",  emoji: "📋" },
+  { id: "shift_report", label: "Shift Report",    emoji: "📄" },
+  { id: "email",        label: "Email",           emoji: "📧" },
+  { id: "general",      label: "General",         emoji: "💬" },
+];
+
+window.CTX_LABELS = {
+  logbook:      "Logbook / LINE Message",
+  shift_report: "Shift Report",
+  email:        "Official Email / Report",
+  general:      "General Communication",
+};
+</script>
+
+<!-- ── Tweaks Panel ── -->
+<script type="text/babel">
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    transform:scale(var(--dc-inv-zoom,1));transform-origin:bottom right;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+
+  .twk-field{appearance:none;box-sizing:border-box;width:100%;min-width:0;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+
+  .twk-num{display:flex;align-items:center;box-sizing:border-box;min-width:0;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+
+  .twk-chips{display:flex;gap:6px}
+  .twk-chip{position:relative;appearance:none;flex:1;min-width:0;height:46px;
+    padding:0;border:0;border-radius:6px;overflow:hidden;cursor:default;
+    box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.06);
+    transition:transform .12s cubic-bezier(.3,.7,.4,1),box-shadow .12s}
+  .twk-chip:hover{transform:translateY(-1px);
+    box-shadow:0 0 0 .5px rgba(0,0,0,.18),0 4px 10px rgba(0,0,0,.12)}
+  .twk-chip[data-on="1"]{box-shadow:0 0 0 1.5px rgba(0,0,0,.85),
+    0 2px 6px rgba(0,0,0,.15)}
+  .twk-chip>span{position:absolute;top:0;bottom:0;right:0;width:34%;
+    display:flex;flex-direction:column;box-shadow:-1px 0 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i{flex:1;box-shadow:0 -1px 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i:first-child{box-shadow:none}
+  .twk-chip svg{position:absolute;top:6px;left:6px;width:13px;height:13px;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+`;
+
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+    window.dispatchEvent(new CustomEvent('tweakchange', { detail: edits }));
+  }, []);
+  return [values, setTweak];
+}
+
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel" data-omelette-chrome=""
+           style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">
+          {children}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function TweakSection({ label, children }) {
+  return (
+    <>
+      <div className="twk-sect">{label}</div>
+      {children}
+    </>
+  );
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function TweakSlider({ label, value, min = 0, max = 100, step = 1, unit = '', onChange }) {
+  return (
+    <TweakRow label={label} value={`${value}${unit}`}>
+      <input type="range" className="twk-slider" min={min} max={max} step={step}
+             value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </TweakRow>
+  );
+}
+
+function TweakToggle({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => onChange(!value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakSelect({ label, value, options, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => {
+          const v = typeof o === 'object' ? o.value : o;
+          const l = typeof o === 'object' ? o.label : o;
+          return <option key={v} value={v}>{l}</option>;
+        })}
+      </select>
+    </TweakRow>
+  );
+}
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  const labelLen = (o) => String(typeof o === 'object' ? o.label : o).length;
+  const maxLen = options.reduce((m, o) => Math.max(m, labelLen(o)), 0);
+  const fitsAsSegments = maxLen <= ({ 2: 16, 3: 10 }[options.length] ?? 0);
+  if (!fitsAsSegments) {
+    const resolve = (s) => {
+      const m = options.find((o) => String(typeof o === 'object' ? o.value : o) === s);
+      return m === undefined ? s : typeof m === 'object' ? m.value : m;
+    };
+    return <TweakSelect label={label} value={value} options={options}
+                        onChange={(s) => onChange(resolve(s))} />;
+  }
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+
+  const segAt = (clientX) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) onChange(v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakText({ label, value, placeholder, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <input className="twk-field" type="text" value={value} placeholder={placeholder}
+             onChange={(e) => onChange(e.target.value)} />
+    </TweakRow>
+  );
+}
+
+function TweakNumber({ label, value, min, max, step = 1, unit = '', onChange }) {
+  const clamp = (n) => {
+    if (min != null && n < min) return min;
+    if (max != null && n > max) return max;
+    return n;
+  };
+  const startRef = React.useRef({ x: 0, val: 0 });
+  const onScrubStart = (e) => {
+    e.preventDefault();
+    startRef.current = { x: e.clientX, val: value };
+    const decimals = (String(step).split('.')[1] || '').length;
+    const move = (ev) => {
+      const dx = ev.clientX - startRef.current.x;
+      const raw = startRef.current.val + dx * step;
+      const snapped = Math.round(raw / step) * step;
+      onChange(clamp(Number(snapped.toFixed(decimals))));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return (
+    <div className="twk-num">
+      <span className="twk-num-lbl" onPointerDown={onScrubStart}>{label}</span>
+      <input type="number" value={value} min={min} max={max} step={step}
+             onChange={(e) => onChange(clamp(Number(e.target.value)))} />
+      {unit && <span className="twk-num-unit">{unit}</span>}
+    </div>
+  );
+}
+
+function __twkIsLight(hex) {
+  const h = String(hex).replace('#', '');
+  const x = h.length === 3 ? h.replace(/./g, (c) => c + c) : h.padEnd(6, '0');
+  const n = parseInt(x.slice(0, 6), 16);
+  if (Number.isNaN(n)) return true;
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return r * 299 + g * 587 + b * 114 > 148000;
+}
+
+const __TwkCheck = ({ light }) => (
+  <svg viewBox="0 0 14 14" aria-hidden="true">
+    <path d="M3 7.2 5.8 10 11 4.2" fill="none" strokeWidth="2.2"
+          strokeLinecap="round" strokeLinejoin="round"
+          stroke={light ? 'rgba(0,0,0,.78)' : '#fff'} />
+  </svg>
+);
+
+function TweakColor({ label, value, options, onChange }) {
+  if (!options || !options.length) {
+    return (
+      <div className="twk-row twk-row-h">
+        <div className="twk-lbl"><span>{label}</span></div>
+        <input type="color" className="twk-swatch" value={value}
+               onChange={(e) => onChange(e.target.value)} />
+      </div>
+    );
+  }
+  const key = (o) => String(JSON.stringify(o)).toLowerCase();
+  const cur = key(value);
+  return (
+    <TweakRow label={label}>
+      <div className="twk-chips" role="radiogroup">
+        {options.map((o, i) => {
+          const colors = Array.isArray(o) ? o : [o];
+          const [hero, ...rest] = colors;
+          const sup = rest.slice(0, 4);
+          const on = key(o) === cur;
+          return (
+            <button key={i} type="button" className="twk-chip" role="radio"
+                    aria-checked={on} data-on={on ? '1' : '0'}
+                    aria-label={colors.join(', ')} title={colors.join(' · ')}
+                    style={{ background: hero }}
+                    onClick={() => onChange(o)}>
+              {sup.length > 0 && (
+                <span>
+                  {sup.map((c, j) => <i key={j} style={{ background: c }} />)}
+                </span>
+              )}
+              {on && <__TwkCheck light={__twkIsLight(hero)} />}
+            </button>
+          );
+        })}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakButton({ label, onClick, secondary = false }) {
+  return (
+    <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
+            onClick={onClick}>{label}</button>
+  );
+}
+
+Object.assign(window, {
+  useTweaks, TweaksPanel, TweakSection, TweakRow,
+  TweakSlider, TweakToggle, TweakRadio, TweakSelect,
+  TweakText, TweakNumber, TweakColor, TweakButton,
+});
+</script>
+
+<!-- ── Main App ── -->
+<script type="text/babel">
+const { useState, useRef, useCallback } = React;
+const { useTweaks, TweaksPanel, TweakSection, TweakRadio } = window;
+
+const fmtTime = ts => new Date(ts).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+
+function CopyButton({ text }) {
+  const [done, setDone] = useState(false);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(text); }
+    catch { const t=document.createElement('textarea');t.value=text;
+      document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t); }
+    setDone(true); setTimeout(()=>setDone(false),2000);
+  };
+  return <button className={`cp-btn ${done?'done':''}`} onClick={copy}>{done?'✓ Copied!':'📋 Copy'}</button>;
+}
+
+function ApiKeyModal({ onSave, onSkip }) {
+  const [key,setKey]=useState(''); const [err,setErr]=useState('');
+  const save = () => {
+    const k=key.trim();
+    if(!k.startsWith('sk-ant-') && !k.startsWith('AIza')){
+      setErr('Key ต้องเป็น AIza... (Google) หรือ sk-ant-... (Claude)'); return;
+    }
+    localStorage.setItem('pta-key',k); onSave(k);
+  };
+  return (
+    <div className="modal-ov" onClick={e=>e.target===e.currentTarget&&onSkip()}>
+      <div className="modal-box">
+        <div className="modal-ico">🔑</div>
+        <h2>ตั้งค่า API Key</h2>
+        <p className="modal-desc">รองรับ 2 ผู้ให้บริการ — เลือกตามที่สะดวก</p>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:14}}>
+          <div style={{background:'var(--srf2)',border:'1px solid var(--bdr)',borderRadius:8,padding:'10px 12px',textAlign:'left'}}>
+            <div style={{fontWeight:700,fontSize:13,marginBottom:2}}>✨ Google AI Studio</div>
+            <div style={{color:'var(--ok)',fontWeight:600,marginBottom:5}}>ฟรี! ไม่มีค่าใช้จ่าย</div>
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{color:'var(--a)',textDecoration:'none',fontSize:11}}>aistudio.google.com →</a>
+          </div>
+          <div style={{background:'var(--srf2)',border:'1px solid var(--bdr)',borderRadius:8,padding:'10px 12px',textAlign:'left'}}>
+            <div style={{fontWeight:700,fontSize:13,marginBottom:2}}>🧠 Anthropic Claude</div>
+            <div style={{color:'var(--t2)',marginBottom:5,fontSize:12}}>Pay-as-you-go</div>
+            <a href="https://console.anthropic.com" target="_blank" rel="noreferrer" style={{color:'var(--a)',textDecoration:'none',fontSize:11}}>console.anthropic.com →</a>
+          </div>
+        </div>
+        <input className="modal-inp" type="password"
+          placeholder="AIza... (Google)  หรือ  sk-ant-... (Claude)"
+          value={key} onChange={e=>{setKey(e.target.value);setErr('');}}
+          onKeyDown={e=>e.key==='Enter'&&save()} autoFocus />
+        {err && <p className="modal-err">{err}</p>}
+        <p className="modal-hint">🔒 Key เก็บไว้ใน browser เท่านั้น ไม่มีการส่งออก</p>
+        <div className="modal-acts">
+          <button className="btn-p" onClick={save} disabled={!key.trim()}>บันทึก & เริ่มใช้งาน</button>
+          <button className="btn-g" onClick={onSkip}>Demo Mode</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InputPanel({ text, setText, ctx, setCtx, onGo, loading }) {
+  return (
+    <div className="panel inp-panel">
+      <div className="ph">
+        <span className="pt">✍️ ข้อความต้นฉบับ</span>
+        <span className="char-c">{text.length} ตัว</span>
+      </div>
+      <textarea className="inp-ta" value={text} onChange={e=>setText(e.target.value)}
+        onKeyDown={e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')onGo();}}
+        placeholder={"พิมพ์ข้อความที่นี่...\n\nตัวอย่าง:\n• DCS alarm ดัง 3 ครั้ง แล้ว trip ไป\n• ขอทำ LOTO เพราะ pump รั่ว\n• ส่งต่อ shift: off-spec product ยังค้างอยู่"} />
+      <div className="inp-ctrl">
+        <div className="ctx-row">
+          <span className="ctx-lbl">บริบท:</span>
+          <div className="ctx-btns">
+            {window.CONTEXTS.map(c=>(
+              <button key={c.id} className={`ctx-btn ${ctx===c.id?'on':''}`} onClick={()=>setCtx(c.id)}>
+                {c.emoji} {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <button className="tr-btn" onClick={onGo} disabled={loading||!text.trim()}>
+          {loading ? <><span className="spin"/> กำลังแปล...</> : <>🚀 Translate <span className="shortcut">Ctrl+↵</span></>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ResultDisplay({ r }) {
+  const { direct, formal, needsDual, thaiMeaning, changes, proTip } = r;
+  return (
+    <div className="res-wrap">
+      <div className="rs rs-rev">
+        <div className="rs-hd"><span className="rs-ico">🎯</span><span className="rs-ttl">Revised English</span></div>
+        {needsDual ? (
+          <div className="dual">
+            <div className="opt">
+              <div className="opt-meta"><span className="bdg bdg-d">Direct &amp; Short</span><span className="opt-sub">Logbook / LINE</span><CopyButton text={direct}/></div>
+              <p className="opt-txt">{direct}</p>
+            </div>
+            <div className="opt opt-f">
+              <div className="opt-meta"><span className="bdg bdg-f">Polite &amp; Formal</span><span className="opt-sub">Email / Report</span><CopyButton text={formal}/></div>
+              <p className="opt-txt">{formal}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="single"><p className="opt-txt" style={{flex:1}}>{direct}</p><CopyButton text={direct}/></div>
+        )}
+      </div>
+      <div className="rs rs-th">
+        <div className="rs-hd"><span className="rs-ico">🇹🇭</span><span className="rs-ttl">ความหมายภาษาไทย</span></div>
+        <p className="th-txt">{thaiMeaning}</p>
+      </div>
+      {changes && changes.length > 0 && (
+        <div className="rs">
+          <div className="rs-hd"><span className="rs-ico">📊</span><span className="rs-ttl">Comparison Table</span></div>
+          <div className="tbl-wrap">
+            <table className="cmp-tbl">
+              <thead><tr><th>ก่อนแก้ไข (Original)</th><th>หลังแก้ไข (Revised)</th><th>เหตุผล</th></tr></thead>
+              <tbody>{changes.map((c,i)=>(
+                <tr key={i}><td className="td-o">{c.original}</td><td className="td-r">{c.revised}</td><td className="td-w">{c.reason}</td></tr>
+              ))}</tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {proTip && (
+        <div className="rs rs-tip">
+          <div className="rs-hd"><span className="rs-ico">💡</span><span className="rs-ttl">Pro-Tip</span></div>
+          <p className="tip-txt">{proTip}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OutputPanel({ result, loading, error }) {
+  if (loading) return (
+    <div className="panel out-panel s-load">
+      <div className="ld-c">
+        <div className="ld-ring"><div/><div/><div/><div/></div>
+        <p className="ld-txt">กำลังวิเคราะห์และแปลภาษา...</p>
+        <p className="ld-sub">AI กำลังตรวจสอบไวยากรณ์และคำศัพท์เทคนิค PTA</p>
+      </div>
+    </div>
+  );
+  if (error) return (
+    <div className="panel out-panel s-err">
+      <div className="err-c">
+        <span style={{fontSize:36}}>⚠️</span>
+        <h3>เกิดข้อผิดพลาด</h3>
+        <p className="err-msg">{error}</p>
+        <p className="err-hint">ตรวจสอบ API Key และการเชื่อมต่ออินเทอร์เน็ต</p>
+      </div>
+    </div>
+  );
+  if (!result) return (
+    <div className="panel out-panel s-empty">
+      <div className="emp-c">
+        <div className="emp-glyph">EN</div>
+        <h3>พร้อมแปลภาษา</h3>
+        <p>พิมพ์ข้อความด้านซ้าย แล้วกด Translate</p>
+        <div className="chips">
+          {['DCS alarm ดัง','pump trip แล้ว','ขอทำ LOTO','off-spec product'].map(x=>(
+            <span key={x} className="chip">{x}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+  return (
+    <div className="panel out-panel">
+      <div className="ph"><span className="pt">📝 ผลการแปล</span></div>
+      <div className="out-scroll"><ResultDisplay r={result}/></div>
+    </div>
+  );
+}
+
+function HistoryPanel({ hist, onSel, activeId }) {
+  return (
+    <div className="panel side-panel">
+      <div className="ph">
+        <span className="pt">🕒 ประวัติ</span>
+        {hist.length>0&&<span className="bdg-cnt">{hist.length}</span>}
+      </div>
+      {hist.length===0 ? <div className="p-empty">ยังไม่มีประวัติการแปล</div> : (
+        <div className="p-scroll">
+          {hist.map(item=>(
+            <div key={item.id} className={`hist-item ${activeId===item.id?'on':''}`} onClick={()=>onSel(item)}>
+              <div className="hist-in">{item.input.length>58?item.input.slice(0,58)+'…':item.input}</div>
+              <div className="hist-meta">
+                <span className="hist-ctx">{item.ctx}</span>
+                <span className="hist-tm">{fmtTime(item.ts)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GlossaryPanel() {
+  const [q, setQ]=useState(''); const [cat, setCat]=useState('All');
+  const G = window.PTA_GLOSSARY;
+  const cats = ['All',...new Set(G.map(g=>g.cat))];
+  const filtered = G.filter(g=>{
+    const lq=q.toLowerCase();
+    const mQ=!q||g.term.toLowerCase().includes(lq)||g.full.toLowerCase().includes(lq)||g.thai.includes(q);
+    return mQ && (cat==='All'||g.cat===cat);
+  });
+  return (
+    <div className="panel side-panel">
+      <div className="ph"><span className="pt">📚 คลังศัพท์ PTA</span><span className="bdg-cnt">{G.length}</span></div>
+      <div className="g-search">
+        <input className="srch-inp" type="text" placeholder="ค้นหาคำศัพท์..." value={q} onChange={e=>setQ(e.target.value)}/>
+      </div>
+      <div className="cat-tabs">
+        {cats.map(c=><button key={c} className={`cat-tab ${cat===c?'on':''}`} onClick={()=>setCat(c)}>{c}</button>)}
+      </div>
+      <div className="p-scroll">
+        {filtered.length===0?<div className="p-empty">ไม่พบคำที่ค้นหา</div>:filtered.map(g=>(
+          <div key={g.term} className="g-item">
+            <div className="g-term">{g.term}</div>
+            <div className="g-full">{g.full}</div>
+            <div className="g-thai">{g.thai}</div>
+            <span className={`g-cat gc-${g.cat.toLowerCase()}`}>{g.cat}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SplitLayout({ inP, outP, hist, onSel, aid }) {
+  const [fp, setFp]=useState(null);
+  const tog = p => setFp(f=>f===p?null:p);
+  return (
+    <div className="ly-split">
+      <div className="sp-inp"><InputPanel {...inP}/></div>
+      <div className="sp-out"><OutputPanel {...outP}/></div>
+      <div className="float-tools">
+        <button className="float-btn" title="ประวัติการแปล" onClick={()=>tog('h')}>🕒</button>
+        <button className="float-btn" title="คลังศัพท์ PTA" onClick={()=>tog('g')}>📚</button>
+      </div>
+      {fp==='h'&&<div className="float-pane"><HistoryPanel hist={hist} onSel={it=>{onSel(it);setFp(null);}} activeId={aid}/></div>}
+      {fp==='g'&&<div className="float-pane right"><GlossaryPanel/></div>}
+    </div>
+  );
+}
+
+function CommandLayout({ inP, outP, hist, onSel, aid }) {
+  return (
+    <div className="ly-cmd">
+      <HistoryPanel hist={hist} onSel={onSel} activeId={aid}/>
+      <div className="cmd-main">
+        <InputPanel {...inP}/>
+        <OutputPanel {...outP}/>
+      </div>
+      <GlossaryPanel/>
+    </div>
+  );
+}
+
+function FlowLayout({ inP, outP, hist, onSel, aid }) {
+  const [tab, setTab]=useState('h');
+  return (
+    <div className="ly-flow">
+      <div className="flow-inner">
+        <div className="panel flow-card"><InputPanel {...inP}/></div>
+        <div className="flow-div">
+          <div className="flow-div-line"/><span>↓ ผลการแปล</span><div className="flow-div-line"/>
+        </div>
+        <div className="panel flow-card" style={{minHeight:280}}><OutputPanel {...outP}/></div>
+      </div>
+      <div className="flow-tabs-wrap">
+        <div className="flow-tab-hd">
+          <button className={`flow-tab-btn ${tab==='h'?'on':''}`} onClick={()=>setTab('h')}>🕒 ประวัติการแปล</button>
+          <button className={`flow-tab-btn ${tab==='g'?'on':''}`} onClick={()=>setTab('g')}>📚 คลังศัพท์</button>
+        </div>
+        <div className="flow-tab-body">
+          {tab==='h'?<HistoryPanel hist={hist} onSel={onSel} activeId={aid}/>:<GlossaryPanel/>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks({ layout:'command', geminiModel:'gemini-2.0-flash-lite' });
+  const [apiKey, setApiKey] = useState(()=>localStorage.getItem('pta-key')||'');
+  const [showModal, setShowModal] = useState(false);
+  const [text, setText] = useState('');
+  const [ctx, setCtx] = useState('logbook');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [hist, setHist] = useState(()=>{ try{return JSON.parse(localStorage.getItem('pta-hist')||'[]');}catch{return [];} });
+  const [aid, setAid] = useState(null);
+
+  React.useEffect(() => { if (!apiKey) setShowModal(true); }, []);
+
+  const go = async () => {
+    if (!apiKey) { setShowModal(true); return; }
+    if (!text.trim()) return;
+    setLoading(true); setError(null); setResult(null);
+    const userMsg = `Context: ${window.CTX_LABELS[ctx]}\n\nOriginal text:\n"${text}"`;
+    try {
+      const isGemini = apiKey.startsWith('AIza');
+      let raw;
+      if(isGemini){
+        const gUrl='https://generativelanguage.googleapis.com/v1beta/models/'+t.geminiModel+':generateContent?key='+apiKey;
+        const gRes=await fetch(gUrl,{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({contents:[{role:'user',parts:[{text:userMsg}]}],
+            systemInstruction:{parts:[{text:window.SYSTEM_PROMPT}]},
+            generationConfig:{maxOutputTokens:1500,temperature:0.4}})
+        });
+        const gText=await gRes.text();
+        if(!gRes.ok){
+          let gErrMsg='Gemini error '+gRes.status;
+          try{const gErr=JSON.parse(gText);gErrMsg=gErr.error?.message||gErrMsg;}catch{}
+          throw new Error(gErrMsg);
+        }
+        const gData=JSON.parse(gText);
+        if(!gData.candidates?.[0]){
+          const blocked=gData.promptFeedback?.blockReason;
+          throw new Error(blocked?'Gemini blocked: '+blocked:'Gemini ไม่ส่งผลลัพธ์กลับมา');
+        }
+        raw=gData.candidates[0].content.parts[0].text.trim();
+        console.log('[Gemini raw]', raw.slice(0,200));
+      } else {
+        const cRes=await fetch('https://api.anthropic.com/v1/messages',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','x-api-key':apiKey,
+            'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+          body:JSON.stringify({model:'claude-opus-4-5',max_tokens:1500,
+            system:window.SYSTEM_PROMPT,messages:[{role:'user',content:userMsg}]})
+        });
+        if(!cRes.ok){const e=await cRes.json().catch(()=>({}));throw new Error(e.error?.message||'Claude error '+cRes.status);}
+        const cData=await cRes.json();
+        raw=cData.content[0].text.trim();
+      }
+      let parsed;
+      try{parsed=JSON.parse(raw);}catch{
+        const m=raw.match(/\{[\s\S]*\}/);
+        if(!m){console.error('[Parse fail] raw=',raw.slice(0,300));throw new Error('AI ตอบกลับไม่ถูกรูปแบบ JSON กรุณาลองใหม่');}
+        try{parsed=JSON.parse(m[0]);}catch(pe){console.error('[JSON parse fail]',m[0]);throw new Error('แปล JSON ไม่ได้ กรุณาลองใหม่');}
+      }
+      setResult(parsed);
+      const entry={id:Date.now(),input:text,ctx,result:parsed,ts:new Date().toISOString()};
+      const nh=[entry,...hist].slice(0,20);
+      setHist(nh); setAid(entry.id);
+      localStorage.setItem('pta-hist',JSON.stringify(nh));
+    } catch(e){ setError(e.message); }
+    finally{ setLoading(false); }
+  };
+
+  const onSel = item => { setText(item.input); setCtx(item.ctx); setResult(item.result); setAid(item.id); };
+  const inP = { text, setText, ctx, setCtx, onGo:go, loading };
+  const outP = { result, loading, error };
+  const shared = { hist, onSel, aid };
+  const Layout = t.layout==='split' ? SplitLayout : t.layout==='flow' ? FlowLayout : CommandLayout;
+
+  return (
+    <div className="app">
+      {showModal && <ApiKeyModal onSave={k=>{setApiKey(k);setShowModal(false);}} onSkip={()=>setShowModal(false)}/>}
+      <header className="app-hd">
+        <div className="brand">
+          <span className="brand-name">PTA Language Assistant</span>
+          <span className="brand-tag">GC-M</span>
+        </div>
+        <div className="hd-c">
+          <div className="lay-tabs">
+            {[['split','⚡ Split'],['command','🖥 Command'],['flow','📜 Flow']].map(([l,lb])=>(
+              <button key={l} className={`lay-tab ${t.layout===l?'on':''}`} onClick={()=>setTweak('layout',l)}>{lb}</button>
+            ))}
+          </div>
+        </div>
+        <button className={`api-btn ${apiKey?'ok':'no'}`} onClick={()=>setShowModal(true)}
+          title={apiKey ? 'คลิกเพื่อเปลี่ยน API Key' : 'คลิกเพื่อตั้งค่า API Key'}>
+          {apiKey?(apiKey.startsWith('AIza')?'🟢 Gemini — ฟรี':'🟢 Claude'):'🔑 ตั้งค่า API Key'}
+        </button>
+      </header>
+      <main className="app-main">
+        <Layout inP={inP} outP={outP} {...shared}/>
+      </main>
+      <TweaksPanel>
+        <TweakSection label="Layout"/>
+        <TweakRadio label="View" id="layout" value={t.layout}
+          options={['split','command','flow']} onChange={v=>setTweak('layout',v)}/>
+        <TweakSection label="Gemini Model"/>
+        <TweakSelect label="Model" id="geminiModel" value={t.geminiModel}
+          options={['gemini-2.0-flash-lite','gemini-2.0-flash','gemini-1.5-flash','gemini-1.5-pro','gemini-2.5-flash','gemini-2.5-pro']}
+          onChange={v=>setTweak('geminiModel',v)}/>
+        <div style={{fontSize:11,color:'var(--t3)',padding:'2px 0 6px',lineHeight:1.5}}>
+          เปลี่ยน model ถ้าตัวปัจจุบันใช้ไม่ได้
+        </div>
+        <TweakSection label="API Key"/>
+        <div style={{padding:'4px 0 8px'}}>
+          <div style={{fontSize:12,color:'var(--t2)',marginBottom:8,lineHeight:1.5}}>
+            {apiKey
+              ? (apiKey.startsWith('AIza')
+                  ? <span style={{color:'var(--ok)',fontWeight:600}}>✨ Google Gemini (ฟรี)</span>
+                  : <span style={{color:'var(--a)',fontWeight:600}}>🧠 Anthropic Claude</span>)
+              : <span style={{color:'var(--err)'}}>⚠️ ยังไม่ได้ตั้งค่า Key</span>
+            }
+          </div>
+          <button onClick={()=>setShowModal(true)}
+            style={{width:'100%',padding:'7px 12px',background:apiKey?'var(--srf2)':'var(--a)',
+              color:apiKey?'var(--txt)':'#fff',border:'1.5px solid',
+              borderColor:apiKey?'var(--bdr)':'var(--a)',borderRadius:6,
+              fontSize:12,fontWeight:600,cursor:'pointer',textAlign:'left'}}>
+            {apiKey ? '🔑 เปลี่ยน API Key' : '🔑 ตั้งค่า API Key'}
+          </button>
+          {apiKey && (
+            <button onClick={()=>{localStorage.removeItem('pta-key');setApiKey('');}}
+              style={{width:'100%',marginTop:5,padding:'6px 12px',background:'none',
+                color:'var(--err)',border:'1px solid #fca5a5',borderRadius:6,
+                fontSize:11,cursor:'pointer'}}>
+              ลบ Key ออก
+            </button>
+          )}
+        </div>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
