@@ -619,11 +619,15 @@ const detectSensitiveTerms = text => {
 };
 
 const parseRaw = raw => {
-  try { return JSON.parse(raw); }
+  // Strip markdown code fences that some models add (e.g. ```json ... ```)
+  let text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+  try { return JSON.parse(text); }
   catch {
-    const m = raw.match(/\{[\s\S]*\}/);
+    // Last resort: pull out the first {...} block
+    const m = text.match(/\{[\s\S]*\}/);
     if(!m) throw new Error('AI ตอบกลับไม่ถูกรูปแบบ JSON กรุณาลองใหม่');
-    return JSON.parse(m[0]);
+    try { return JSON.parse(m[0]); }
+    catch { throw new Error('AI ตอบกลับไม่ถูกรูปแบบ JSON กรุณาลองใหม่'); }
   }
 };
 
@@ -639,7 +643,7 @@ const callProvider = async (provider, key, userMsg, sysPrompt, geminiModel) => {
     const res = await fetch(url, {method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({contents:[{role:'user',parts:[{text:userMsg}]}],
         systemInstruction:{parts:[{text:sysPrompt}]},
-        generationConfig:{maxOutputTokens:1500,temperature:0.4}})});
+        generationConfig:{maxOutputTokens:1500,temperature:0.4,responseMimeType:'application/json'}})});
     const txt = await res.text();
     if(!res.ok){let m='Gemini error '+res.status;try{const d=JSON.parse(txt);m=d.error?.message||m;}catch{}throw new Error(m);}
     const d = JSON.parse(txt);
