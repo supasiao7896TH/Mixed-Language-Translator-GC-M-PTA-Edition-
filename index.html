@@ -847,35 +847,66 @@ function CopyButton({ text }) {
   return <button className={`cp-btn ${done?'done':''}`} onClick={copy}>{done?'✓ Copied!':'📋 Copy'}</button>;
 }
 
+const detectProvider = k => {
+  if (!k) return null;
+  if (k.startsWith('gsk_'))    return 'groq';
+  if (k.startsWith('sk-or-'))  return 'openrouter';
+  if (k.startsWith('AIza'))    return 'gemini';
+  if (k.startsWith('sk-ant-')) return 'claude';
+  return null;
+};
+
+const PROVIDER_LABELS = {
+  groq:        '⚡ Groq — ฟรี',
+  openrouter:  '🔀 OpenRouter — ฟรี',
+  gemini:      '✨ Gemini — ฟรี',
+  claude:      '🧠 Claude',
+};
+
 function ApiKeyModal({ onSave, onSkip }) {
   const [key,setKey]=useState(''); const [err,setErr]=useState('');
   const save = () => {
     const k=key.trim();
-    if(!k.startsWith('sk-ant-') && !k.startsWith('AIza')){
-      setErr('Key ต้องเป็น AIza... (Google) หรือ sk-ant-... (Claude)'); return;
+    if(!detectProvider(k)){
+      setErr('ใส่ key ที่รองรับ: gsk_... / sk-or-... / AIza... / sk-ant-...'); return;
     }
     localStorage.setItem('pta-key',k); onSave(k);
   };
+  const cardStyle = {background:'var(--srf2)',border:'1px solid var(--bdr)',borderRadius:8,padding:'10px 12px',textAlign:'left'};
   return (
     <div className="modal-ov" onClick={e=>e.target===e.currentTarget&&onSkip()}>
-      <div className="modal-box">
+      <div className="modal-box" style={{maxWidth:480}}>
         <div className="modal-ico">🔑</div>
         <h2>ตั้งค่า API Key</h2>
-        <p className="modal-desc">รองรับ 2 ผู้ให้บริการ — เลือกตามที่สะดวก</p>
+        <p className="modal-desc">รองรับ 4 ผู้ให้บริการ — แนะนำ Groq หรือ OpenRouter สำหรับเครือข่ายโรงงาน</p>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:14}}>
-          <div style={{background:'var(--srf2)',border:'1px solid var(--bdr)',borderRadius:8,padding:'10px 12px',textAlign:'left'}}>
+          <div style={{...cardStyle,border:'1.5px solid var(--a)'}}>
+            <div style={{fontWeight:700,fontSize:13,marginBottom:2}}>⚡ Groq</div>
+            <div style={{color:'var(--ok)',fontWeight:600,marginBottom:4}}>ฟรี! เร็วมาก</div>
+            <div style={{fontSize:11,color:'var(--t3)',marginBottom:4}}>key: gsk_...</div>
+            <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" style={{color:'var(--a)',textDecoration:'none',fontSize:11}}>console.groq.com →</a>
+          </div>
+          <div style={cardStyle}>
+            <div style={{fontWeight:700,fontSize:13,marginBottom:2}}>🔀 OpenRouter</div>
+            <div style={{color:'var(--ok)',fontWeight:600,marginBottom:4}}>ฟรี! หลาย model</div>
+            <div style={{fontSize:11,color:'var(--t3)',marginBottom:4}}>key: sk-or-...</div>
+            <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" style={{color:'var(--a)',textDecoration:'none',fontSize:11}}>openrouter.ai →</a>
+          </div>
+          <div style={cardStyle}>
             <div style={{fontWeight:700,fontSize:13,marginBottom:2}}>✨ Google AI Studio</div>
-            <div style={{color:'var(--ok)',fontWeight:600,marginBottom:5}}>ฟรี! ไม่มีค่าใช้จ่าย</div>
+            <div style={{color:'var(--ok)',fontWeight:600,marginBottom:4}}>ฟรี (อาจถูกบล็อก)</div>
+            <div style={{fontSize:11,color:'var(--t3)',marginBottom:4}}>key: AIza...</div>
             <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{color:'var(--a)',textDecoration:'none',fontSize:11}}>aistudio.google.com →</a>
           </div>
-          <div style={{background:'var(--srf2)',border:'1px solid var(--bdr)',borderRadius:8,padding:'10px 12px',textAlign:'left'}}>
+          <div style={cardStyle}>
             <div style={{fontWeight:700,fontSize:13,marginBottom:2}}>🧠 Anthropic Claude</div>
-            <div style={{color:'var(--t2)',marginBottom:5,fontSize:12}}>Pay-as-you-go</div>
+            <div style={{color:'var(--t2)',marginBottom:4,fontSize:12}}>Pay-as-you-go</div>
+            <div style={{fontSize:11,color:'var(--t3)',marginBottom:4}}>key: sk-ant-...</div>
             <a href="https://console.anthropic.com" target="_blank" rel="noreferrer" style={{color:'var(--a)',textDecoration:'none',fontSize:11}}>console.anthropic.com →</a>
           </div>
         </div>
         <input className="modal-inp" type="password"
-          placeholder="AIza... (Google)  หรือ  sk-ant-... (Claude)"
+          placeholder="gsk_...  /  sk-or-...  /  AIza...  /  sk-ant-..."
           value={key} onChange={e=>{setKey(e.target.value);setErr('');}}
           onKeyDown={e=>e.key==='Enter'&&save()} autoFocus />
         {err && <p className="modal-err">{err}</p>}
@@ -1138,9 +1169,9 @@ function App() {
     setLoading(true); setError(null); setResult(null);
     const userMsg = `Context: ${window.CTX_LABELS[ctx]}\n\nOriginal text:\n"${text}"`;
     try {
-      const isGemini = apiKey.startsWith('AIza');
+      const provider = detectProvider(apiKey);
       let raw;
-      if(isGemini){
+      if(provider==='gemini'){
         const gUrl='https://generativelanguage.googleapis.com/v1beta/models/'+t.geminiModel+':generateContent?key='+apiKey;
         const gRes=await fetch(gUrl,{method:'POST',headers:{'Content-Type':'application/json'},
           body:JSON.stringify({contents:[{role:'user',parts:[{text:userMsg}]}],
@@ -1159,8 +1190,7 @@ function App() {
           throw new Error(blocked?'Gemini blocked: '+blocked:'Gemini ไม่ส่งผลลัพธ์กลับมา');
         }
         raw=gData.candidates[0].content.parts[0].text.trim();
-        console.log('[Gemini raw]', raw.slice(0,200));
-      } else {
+      } else if(provider==='claude'){
         const cRes=await fetch('https://api.anthropic.com/v1/messages',{
           method:'POST',
           headers:{'Content-Type':'application/json','x-api-key':apiKey,
@@ -1171,6 +1201,24 @@ function App() {
         if(!cRes.ok){const e=await cRes.json().catch(()=>({}));throw new Error(e.error?.message||'Claude error '+cRes.status);}
         const cData=await cRes.json();
         raw=cData.content[0].text.trim();
+      } else {
+        // Groq & OpenRouter ใช้ OpenAI-compatible API
+        const isGroq = provider==='groq';
+        const oUrl = isGroq
+          ? 'https://api.groq.com/openai/v1/chat/completions'
+          : 'https://openrouter.ai/api/v1/chat/completions';
+        const oModel = isGroq
+          ? 'llama-3.3-70b-versatile'
+          : 'meta-llama/llama-3.3-70b-instruct:free';
+        const oHeaders = {'Content-Type':'application/json','Authorization':'Bearer '+apiKey};
+        if(!isGroq) oHeaders['HTTP-Referer']='https://pta-translator.local';
+        const oRes=await fetch(oUrl,{method:'POST',headers:oHeaders,
+          body:JSON.stringify({model:oModel,max_tokens:1500,temperature:0.4,
+            messages:[{role:'system',content:window.SYSTEM_PROMPT},{role:'user',content:userMsg}]})
+        });
+        if(!oRes.ok){const e=await oRes.json().catch(()=>({}));throw new Error(e.error?.message||(isGroq?'Groq':'OpenRouter')+' error '+oRes.status);}
+        const oData=await oRes.json();
+        raw=oData.choices[0].message.content.trim();
       }
       let parsed;
       try{parsed=JSON.parse(raw);}catch{
@@ -1210,7 +1258,7 @@ function App() {
         </div>
         <button className={`api-btn ${apiKey?'ok':'no'}`} onClick={()=>setShowModal(true)}
           title={apiKey ? 'คลิกเพื่อเปลี่ยน API Key' : 'คลิกเพื่อตั้งค่า API Key'}>
-          {apiKey?(apiKey.startsWith('AIza')?'🟢 Gemini — ฟรี':'🟢 Claude'):'🔑 ตั้งค่า API Key'}
+          {apiKey ? '🟢 '+PROVIDER_LABELS[detectProvider(apiKey)] : '🔑 ตั้งค่า API Key'}
         </button>
       </header>
       <main className="app-main">
@@ -1231,9 +1279,9 @@ function App() {
         <div style={{padding:'4px 0 8px'}}>
           <div style={{fontSize:12,color:'var(--t2)',marginBottom:8,lineHeight:1.5}}>
             {apiKey
-              ? (apiKey.startsWith('AIza')
-                  ? <span style={{color:'var(--ok)',fontWeight:600}}>✨ Google Gemini (ฟรี)</span>
-                  : <span style={{color:'var(--a)',fontWeight:600}}>🧠 Anthropic Claude</span>)
+              ? <span style={{color: detectProvider(apiKey)==='claude' ? 'var(--a)' : 'var(--ok)', fontWeight:600}}>
+                  {PROVIDER_LABELS[detectProvider(apiKey)]}
+                </span>
               : <span style={{color:'var(--err)'}}>⚠️ ยังไม่ได้ตั้งค่า Key</span>
             }
           </div>
